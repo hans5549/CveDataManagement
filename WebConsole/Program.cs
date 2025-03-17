@@ -1,4 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using MudBlazor.Services;
+using Serilog;
 using WebConsole.Components;
+using WebConsole.Data;
+using WebConsole.Helper;
 
 namespace WebConsole;
 
@@ -8,9 +13,30 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day)
+            .CreateLogger();
+        // Add Serilog services
+        builder.Logging.AddSerilog();
+
+        // Add MudBlazor services
+        builder.Services.AddMudServices(config =>
+        {
+            config.SnackbarConfiguration.VisibleStateDuration = 1000;
+            config.SnackbarConfiguration.HideTransitionDuration = 200;
+            config.SnackbarConfiguration.ShowTransitionDuration = 200;
+        });
+
         // Add services to the container.
-        builder.Services.AddRazorComponents()
+        builder.Services
+            .AddRazorComponents()
             .AddInteractiveServerComponents();
+
+        builder.Services.AddAllServices().AddAllRepositories();
+
+        var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
+        builder.Services.AddDbContext<CveDbContext>(options =>
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
         var app = builder.Build();
 

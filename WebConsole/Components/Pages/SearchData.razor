@@ -1,0 +1,87 @@
+@page "/"
+
+<MudText Typo="Typo.h3" Class="mb-4">資料查詢</MudText>
+
+<MudGrid Spacing="4">
+    <MudItem xs="6">
+        <MudCard Class="ma-2 pa-2" Elevation="3">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">產品名稱</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudSelect Label="字母"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   Value="@_vendorLetter"
+                                   ValueChanged="@((string? val) => OnVendorLetterChanged(val))">
+                            @foreach (var letter in _alphabetArray)
+                            {
+                                <MudSelectItem Value="letter.ToString()">@letter.ToString()</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSelect Label="廠商"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   Value="@_vendor"
+                                   ValueChanged="@((string? val) => OnVendorsChanged(val))">
+                            @foreach (var vendor in _vendors)
+                            {
+                                <MudSelectItem Value="vendor">@vendor</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSelect Label="產品"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   Value="@_product"
+                                   ValueChanged="@((string? val) => OnProductChanged(val))">
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem Value="product">@product</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <MudTreeView T="string">
+                    @foreach (var cveId in _cveId)
+                    {
+                        <MudTreeViewItem Value="@($"CVE ID: {cveId}")"
+                                         Icon="@Icons.Material.Filled.DataObject"
+                                         IconColor="Color.Info"/>
+                    }
+                </MudTreeView>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="6">
+        <MudCard Class="ma-2 pa-2" Elevation="3">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">產品名稱</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTreeView T="string">
+                    @foreach (var letter in _alphabetArray)
+                    {
+                        <MudTreeViewItem Value="@($"Letter {letter}")"
+                                         Icon="@Icons.Custom.Uncategorized.Folder"
+                                         IconExpanded="@Icons.Custom.Uncategorized.FolderOpen"
+                                         IconColor="Color.Info"
+                                         ExpandButtonIcon="@Icons.Material.Filled.ArrowRight"
+                                         ExpandButtonIconColor="Color.Primary">
+                        </MudTreeViewItem>
+                    }
+                </MudTreeView>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
