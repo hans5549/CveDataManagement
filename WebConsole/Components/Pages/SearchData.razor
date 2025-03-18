@@ -3,6 +3,7 @@
 <MudText Typo="Typo.h3" Class="mb-4">資料查詢</MudText>
 
 <MudGrid Spacing="4">
+    <!-- Product Name Card -->
     <MudItem xs="6">
         <MudCard Class="ma-2 pa-2" Elevation="3">
             <MudCardHeader>
@@ -12,6 +13,7 @@
             </MudCardHeader>
             <MudCardContent>
                 <MudGrid>
+                    <!-- Letter Selection -->
                     <MudItem xs="12">
                         <MudSelect Label="字母"
                                    Variant="Variant.Outlined"
@@ -24,6 +26,8 @@
                             }
                         </MudSelect>
                     </MudItem>
+
+                    <!-- Vendor Selection -->
                     <MudItem xs="12">
                         <MudSelect Label="廠商"
                                    Variant="Variant.Outlined"
@@ -36,6 +40,8 @@
                             }
                         </MudSelect>
                     </MudItem>
+
+                    <!-- Product Selection -->
                     <MudItem xs="12">
                         <MudSelect Label="產品"
                                    Variant="Variant.Outlined"
@@ -50,10 +56,14 @@
                     </MudItem>
                 </MudGrid>
 
-                <MudTreeView T="string">
+                <!-- CVE ID List -->
+                <MudTreeView T="string"
+                             SelectedValue="@_selectedCveId"
+                             SelectedValueChanged="@((string? val) => OnSelectedCveIdChanged(val))">
                     @foreach (var cveId in _cveId)
                     {
-                        <MudTreeViewItem Value="@($"CVE ID: {cveId}")"
+                        <MudTreeViewItem Text="@($"CVE ID: {cveId}")"
+                                         Value="cveId"
                                          Icon="@Icons.Material.Filled.DataObject"
                                          IconColor="Color.Info"/>
                     }
@@ -61,26 +71,622 @@
             </MudCardContent>
         </MudCard>
     </MudItem>
+
+    <!-- CVE Details Card -->
     <MudItem xs="6">
         <MudCard Class="ma-2 pa-2" Elevation="3">
             <MudCardHeader>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">產品名稱</MudText>
+                    <MudText Typo="Typo.h6">@($"CVE ID: {_selectedCveId}")</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
-                <MudTreeView T="string">
-                    @foreach (var letter in _alphabetArray)
-                    {
-                        <MudTreeViewItem Value="@($"Letter {letter}")"
-                                         Icon="@Icons.Custom.Uncategorized.Folder"
-                                         IconExpanded="@Icons.Custom.Uncategorized.FolderOpen"
-                                         IconColor="Color.Info"
-                                         ExpandButtonIcon="@Icons.Material.Filled.ArrowRight"
-                                         ExpandButtonIconColor="Color.Primary">
-                        </MudTreeViewItem>
-                    }
-                </MudTreeView>
+                @if (_selectedCveData == null)
+                {
+                    <MudText Typo="Typo.body1">請選擇一個 CVE ID 以查看詳細資訊</MudText>
+                }
+                else
+                {
+                    <MudGrid>
+                        <!-- CVE 基本資訊 -->
+                        <MudItem xs="12">
+                            <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #f5f5f5;">
+                                <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">基本資訊</MudText>
+                                
+                                @if (_selectedCveData.CveMetadata != null)
+                                {
+                                    <MudGrid>
+                                        <MudItem xs="6">
+                                            @if (!string.IsNullOrEmpty(_selectedCveData.CveMetadata.CveId))
+                                            {
+                                                <MudText><strong>CVE ID:</strong> @_selectedCveData.CveMetadata.CveId</MudText>
+                                            }
+                                            @if (!string.IsNullOrEmpty(_selectedCveData.CveMetadata.AssignerOrgId))
+                                            {
+                                                <MudText><strong>分配機構 ID:</strong> @_selectedCveData.CveMetadata.AssignerOrgId</MudText>
+                                            }
+                                            @if (!string.IsNullOrEmpty(_selectedCveData.CveMetadata.AssignerShortName))
+                                            {
+                                                <MudText><strong>分配機構名稱:</strong> @_selectedCveData.CveMetadata.AssignerShortName</MudText>
+                                            }
+                                            @if (!string.IsNullOrEmpty(_selectedCveData.CveMetadata.State))
+                                            {
+                                                <MudText><strong>狀態:</strong> @_selectedCveData.CveMetadata.State</MudText>
+                                            }
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            @if (_selectedCveData.CveMetadata.DateReserved.HasValue)
+                                            {
+                                                <MudText><strong>保留日期:</strong> @_selectedCveData.CveMetadata.DateReserved?.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                            }
+                                            @if (_selectedCveData.CveMetadata.DatePublished.HasValue)
+                                            {
+                                                <MudText><strong>公開日期:</strong> @_selectedCveData.CveMetadata.DatePublished?.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                            }
+                                            @if (_selectedCveData.CveMetadata.DateUpdated.HasValue)
+                                            {
+                                                <MudText><strong>更新日期:</strong> @_selectedCveData.CveMetadata.DateUpdated?.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                            }
+                                        </MudItem>
+                                    </MudGrid>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(_selectedCveData.DataType))
+                                {
+                                    <MudText><strong>資料類型:</strong> @_selectedCveData.DataType</MudText>
+                                }
+                                @if (!string.IsNullOrEmpty(_selectedCveData.DataVersion))
+                                {
+                                    <MudText><strong>資料版本:</strong> @_selectedCveData.DataVersion</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <!-- 漏洞描述 -->
+                        @if (_selectedCveData.Containers?.Cna?.Descriptions != null && _selectedCveData.Containers.Cna.Descriptions.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #f0f8ff;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">漏洞描述</MudText>
+                                    @foreach (var desc in _selectedCveData.Containers.Cna.Descriptions)
+                                    {
+                                        <MudAlert Severity="Severity.Info" Class="mb-2" Dense="true">
+                                            <MudText><strong>[@desc.Language]</strong> @desc.DescriptionText</MudText>
+                                        </MudAlert>
+                                    }
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 漏洞風險概述 -->
+                        <MudItem xs="12">
+                            <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #fff4e5;">
+                                <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Error">漏洞風險概述</MudText>
+                                
+                                <MudGrid>
+                                    <!-- 風險等級 -->
+                                    <MudItem xs="12" md="6">
+                                        <MudCard Elevation="2" Class="mb-3" Style="background-color: rgba(244, 67, 54, 0.08);">
+                                            <MudCardContent>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Error"><strong>風險等級</strong></MudText>
+                                                @{
+                                                    string severityLevel = "未評估";
+                                                    string severityColor = "grey";
+                                                    double? highestScore = null;
+                                                    
+                                                    if (_selectedCveData.Containers?.Cna?.Metrics != null)
+                                                    {
+                                                        foreach (var metric in _selectedCveData.Containers.Cna.Metrics)
+                                                        {
+                                                            if (metric.CvssV4_0 != null && (!highestScore.HasValue || metric.CvssV4_0.BaseScore > highestScore))
+                                                            {
+                                                                highestScore = metric.CvssV4_0.BaseScore;
+                                                                severityLevel = metric.CvssV4_0.BaseSeverity ?? "未評估";
+                                                            }
+                                                            else if (metric.CvssV3_1 != null && (!highestScore.HasValue || metric.CvssV3_1.BaseScore > highestScore))
+                                                            {
+                                                                highestScore = metric.CvssV3_1.BaseScore;
+                                                                severityLevel = metric.CvssV3_1.BaseSeverity ?? "未評估";
+                                                            }
+                                                            else if (metric.CvssV3_0 != null && (!highestScore.HasValue || metric.CvssV3_0.BaseScore > highestScore))
+                                                            {
+                                                                highestScore = metric.CvssV3_0.BaseScore;
+                                                                severityLevel = metric.CvssV3_0.BaseSeverity ?? "未評估";
+                                                            }
+                                                            else if (metric.CvssV2_0 != null && (!highestScore.HasValue || metric.CvssV2_0.BaseScore > highestScore))
+                                                            {
+                                                                highestScore = metric.CvssV2_0.BaseScore;
+                                                                if (metric.CvssV2_0.BaseScore >= 7.0)
+                                                                    severityLevel = "HIGH";
+                                                                else if (metric.CvssV2_0.BaseScore >= 4.0)
+                                                                    severityLevel = "MEDIUM";
+                                                                else
+                                                                    severityLevel = "LOW";
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    string textColorStyle = "";
+                                                    Color textColor = Color.Default;
+                                                    
+                                                    switch (severityLevel?.ToUpper())
+                                                    {
+                                                        case "CRITICAL":
+                                                            textColorStyle = "color: #b71c1c;"; // red darken-4
+                                                            textColor = Color.Error;
+                                                            break;
+                                                        case "HIGH":
+                                                            textColorStyle = "color: #f44336;"; // red
+                                                            textColor = Color.Error;
+                                                            break;
+                                                        case "MEDIUM":
+                                                            textColorStyle = "color: #ff9800;"; // orange
+                                                            textColor = Color.Warning;
+                                                            break;
+                                                        case "LOW":
+                                                            textColorStyle = "color: #ffc107;"; // yellow darken-2
+                                                            textColor = Color.Warning;
+                                                            break;
+                                                        default:
+                                                            textColorStyle = "color: #9e9e9e;"; // grey
+                                                            textColor = Color.Default;
+                                                            break;
+                                                    }
+                                                }
+                                                
+                                                <MudText Typo="Typo.h4" Class="mt-3 d-flex justify-center" Style="@textColorStyle">
+                                                    @severityLevel
+                                                </MudText>
+                                                
+                                                @if (highestScore.HasValue)
+                                                {
+                                                    <MudText Typo="Typo.body1" Class="d-flex justify-center">
+                                                        基本分數: @highestScore.Value.ToString("F1")
+                                                    </MudText>
+                                                }
+                                            </MudCardContent>
+                                        </MudCard>
+                                    </MudItem>
+                                    
+                                    <!-- 漏洞類型 -->
+                                    <MudItem xs="12" md="6">
+                                        <MudCard Elevation="2" Class="mb-3" Style="background-color: rgba(63, 81, 181, 0.08);">
+                                            <MudCardContent>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Primary"><strong>漏洞類型</strong></MudText>
+                                                @if (_selectedCveData.Containers?.Cna?.ProblemTypes != null && _selectedCveData.Containers.Cna.ProblemTypes.Any())
+                                                {
+                                                    <MudList T="string" Dense="true" Class="mt-2" Clickable="false">
+                                                        @foreach (var problemType in _selectedCveData.Containers.Cna.ProblemTypes)
+                                                        {
+                                                            @if (problemType.Descriptions?.Count > 0)
+                                                            {
+                                                                foreach (var desc in problemType.Descriptions)
+                                                                {
+                                                                    if (!string.IsNullOrEmpty(desc.CweId))
+                                                                    {
+                                                                        <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="Color.Primary">
+                                                                            <strong>@desc.CweId</strong> - @desc.Description
+                                                                        </MudListItem>
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    </MudList>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.body1" Class="my-3">無相關漏洞類型資訊</MudText>
+                                                }
+                                            </MudCardContent>
+                                        </MudCard>
+                                    </MudItem>
+                                    
+                                    <!-- 主要受影響產品 -->
+                                    <MudItem xs="12">
+                                        <MudCard Elevation="2" Style="background-color: rgba(76, 175, 80, 0.08);">
+                                            <MudCardContent>
+                                                <MudText Typo="Typo.subtitle1" Color="Color.Success"><strong>主要受影響產品</strong></MudText>
+                                                @if (_selectedCveData.Containers?.Cna?.Affected != null && _selectedCveData.Containers.Cna.Affected.Any())
+                                                {
+                                                    <MudChipSet T="string" Class="mt-2">
+                                                        @foreach (var affected in _selectedCveData.Containers.Cna.Affected.Take(5))
+                                                        {
+                                                            <MudChip T="string" Color="Color.Success" Size="Size.Small" Label="true">
+                                                                @affected.Vendor / @affected.Product
+                                                            </MudChip>
+                                                        }
+                                                        @if (_selectedCveData.Containers.Cna.Affected.Count > 5)
+                                                        {
+                                                            <MudChip T="string" Color="Color.Default" Size="Size.Small" Label="true">
+                                                                +@(_selectedCveData.Containers.Cna.Affected.Count - 5) 更多
+                                                            </MudChip>
+                                                        }
+                                                    </MudChipSet>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.body1" Class="my-3">無相關受影響產品資訊</MudText>
+                                                }
+                                            </MudCardContent>
+                                        </MudCard>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+                        </MudItem>
+
+                        <!-- CNA 資訊 -->
+                        @if (_selectedCveData.Containers?.Cna != null)
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #fff8e1;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">CNA 資訊</MudText>
+                                    
+                                    @if (!string.IsNullOrEmpty(_selectedCveData.Containers.Cna.Title))
+                                    {
+                                        <MudText><strong>標題:</strong> @_selectedCveData.Containers.Cna.Title</MudText>
+                                    }
+                                    
+                                    @if (_selectedCveData.Containers.Cna.ProviderMetadata != null)
+                                    {
+                                        <MudDivider Class="my-2" />
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">提供者資訊</MudText>
+                                        
+                                        @if (!string.IsNullOrEmpty(_selectedCveData.Containers.Cna.ProviderMetadata.OrgId))
+                                        {
+                                            <MudText><strong>提供者 ID:</strong> @_selectedCveData.Containers.Cna.ProviderMetadata.OrgId</MudText>
+                                        }
+                                        @if (!string.IsNullOrEmpty(_selectedCveData.Containers.Cna.ProviderMetadata.ShortName))
+                                        {
+                                            <MudText><strong>提供者名稱:</strong> @_selectedCveData.Containers.Cna.ProviderMetadata.ShortName</MudText>
+                                        }
+                                        @if (_selectedCveData.Containers.Cna.ProviderMetadata.DateUpdated.HasValue)
+                                        {
+                                            <MudText><strong>提供者更新日期:</strong> @_selectedCveData.Containers.Cna.ProviderMetadata.DateUpdated?.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                        }
+                                    }
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 問題類型 (CWE) -->
+                        @if (_selectedCveData.Containers?.Cna?.ProblemTypes != null && _selectedCveData.Containers.Cna.ProblemTypes.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #e8f5e9;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">問題類型 (CWE)</MudText>
+                                    
+                                    @foreach (var problemType in _selectedCveData.Containers.Cna.ProblemTypes)
+                                    {
+                                        @if (problemType.Descriptions?.Count > 0)
+                                        {
+                                            foreach (var desc in problemType.Descriptions)
+                                            {
+                                                <MudCard Elevation="0" Class="mb-2 pa-2" Style="background-color: #f1f8e9;">
+                                                    @if (!string.IsNullOrEmpty(desc.CweId))
+                                                    {
+                                                        <MudText><strong>CWE ID:</strong> @desc.CweId</MudText>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(desc.Description))
+                                                    {
+                                                        <MudText><strong>描述 (@desc.Language):</strong> @desc.Description</MudText>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(desc.Type))
+                                                    {
+                                                        <MudText><strong>類型:</strong> @desc.Type</MudText>
+                                                    }
+                                                </MudCard>
+                                            }
+                                        }
+                                    }
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 受影響產品 -->
+                        @if (_selectedCveData.Containers?.Cna?.Affected != null && _selectedCveData.Containers.Cna.Affected.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #ffebee;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">受影響產品</MudText>
+                                    <MudTable Items="@_selectedCveData.Containers.Cna.Affected" Dense="true" Hover="true" Striped="true" Bordered="true">
+                                        <HeaderContent>
+                                            <MudTh>廠商</MudTh>
+                                            <MudTh>產品</MudTh>
+                                            <MudTh>版本</MudTh>
+                                            <MudTh>模組</MudTh>
+                                        </HeaderContent>
+                                        <RowTemplate>
+                                            <MudTd DataLabel="廠商">@context.Vendor</MudTd>
+                                            <MudTd DataLabel="產品">@context.Product</MudTd>
+                                            <MudTd DataLabel="版本">
+                                                @if (context.Versions?.Count > 0)
+                                                {
+                                                    <MudList T="string" Dense="true" DisablePadding="true">
+                                                        @foreach (var version in context.Versions)
+                                                        {
+                                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Label" IconSize="Size.Small">
+                                                                @($"{version.VersionValue} ({version.Status})")
+                                                                @if (!string.IsNullOrEmpty(version.VersionType))
+                                                                {
+                                                                    <span> - @version.VersionType</span>
+                                                                }
+                                                            </MudListItem>
+                                                        }
+                                                    </MudList>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </MudTd>
+                                            <MudTd DataLabel="模組">
+                                                @if (context.Modules?.Count > 0)
+                                                {
+                                                    <MudList T="string" Dense="true" DisablePadding="true">
+                                                        @foreach (var module in context.Modules)
+                                                        {
+                                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Extension" IconSize="Size.Small">
+                                                                @module
+                                                            </MudListItem>
+                                                        }
+                                                    </MudList>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </MudTd>
+                                        </RowTemplate>
+                                    </MudTable>
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 風險評分 -->
+                        @if (_selectedCveData.Containers?.Cna?.Metrics != null && _selectedCveData.Containers.Cna.Metrics.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #ede7f6;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">風險評分</MudText>
+                                    <MudGrid>
+                                        @foreach (var metric in _selectedCveData.Containers.Cna.Metrics)
+                                        {
+                                            @if (metric.CvssV4_0 != null)
+                                            {
+                                                <MudItem xs="12" md="6">
+                                                    <MudCard Elevation="0" Class="pa-2 mb-2" Style="background-color: #d1c4e9;">
+                                                        <MudText Typo="Typo.subtitle1"><strong>CVSS v4.0</strong></MudText>
+                                                        <MudText><strong>基本分數:</strong> @metric.CvssV4_0.BaseScore (@metric.CvssV4_0.BaseSeverity)</MudText>
+                                                        @if (!string.IsNullOrEmpty(metric.CvssV4_0.VectorString))
+                                                        {
+                                                            <MudText Style="word-break: break-all;"><strong>向量:</strong> @metric.CvssV4_0.VectorString</MudText>
+                                                        }
+                                                    </MudCard>
+                                                </MudItem>
+                                            }
+                                            @if (metric.CvssV3_1 != null)
+                                            {
+                                                <MudItem xs="12" md="6">
+                                                    <MudCard Elevation="0" Class="pa-2 mb-2" Style="background-color: #d1c4e9;">
+                                                        <MudText Typo="Typo.subtitle1"><strong>CVSS v3.1</strong></MudText>
+                                                        <MudText><strong>基本分數:</strong> @metric.CvssV3_1.BaseScore (@metric.CvssV3_1.BaseSeverity)</MudText>
+                                                        @if (!string.IsNullOrEmpty(metric.CvssV3_1.VectorString))
+                                                        {
+                                                            <MudText Style="word-break: break-all;"><strong>向量:</strong> @metric.CvssV3_1.VectorString</MudText>
+                                                        }
+                                                    </MudCard>
+                                                </MudItem>
+                                            }
+                                            @if (metric.CvssV3_0 != null)
+                                            {
+                                                <MudItem xs="12" md="6">
+                                                    <MudCard Elevation="0" Class="pa-2 mb-2" Style="background-color: #d1c4e9;">
+                                                        <MudText Typo="Typo.subtitle1"><strong>CVSS v3.0</strong></MudText>
+                                                        <MudText><strong>基本分數:</strong> @metric.CvssV3_0.BaseScore (@metric.CvssV3_0.BaseSeverity)</MudText>
+                                                        @if (!string.IsNullOrEmpty(metric.CvssV3_0.VectorString))
+                                                        {
+                                                            <MudText Style="word-break: break-all;"><strong>向量:</strong> @metric.CvssV3_0.VectorString</MudText>
+                                                        }
+                                                    </MudCard>
+                                                </MudItem>
+                                            }
+                                            @if (metric.CvssV2_0 != null)
+                                            {
+                                                <MudItem xs="12" md="6">
+                                                    <MudCard Elevation="0" Class="pa-2 mb-2" Style="background-color: #d1c4e9;">
+                                                        <MudText Typo="Typo.subtitle1"><strong>CVSS v2.0</strong></MudText>
+                                                        <MudText><strong>基本分數:</strong> @metric.CvssV2_0.BaseScore</MudText>
+                                                        @if (!string.IsNullOrEmpty(metric.CvssV2_0.VectorString))
+                                                        {
+                                                            <MudText Style="word-break: break-all;"><strong>向量:</strong> @metric.CvssV2_0.VectorString</MudText>
+                                                        }
+                                                    </MudCard>
+                                                </MudItem>
+                                            }
+                                        }
+                                    </MudGrid>
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 參考資料 -->
+                        @if (_selectedCveData.Containers?.Cna?.References != null && _selectedCveData.Containers.Cna.References.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #e3f2fd;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">參考資料</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var reference in _selectedCveData.Containers.Cna.References)
+                                        {
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Link" IconSize="Size.Small">
+                                                @if (!string.IsNullOrEmpty(reference.Url))
+                                                {
+                                                    <MudLink Href="@reference.Url" Target="_blank">@(!string.IsNullOrEmpty(reference.Name) ? reference.Name : reference.Url)</MudLink>
+                                                }
+                                                else
+                                                {
+                                                    <span>@reference.Name</span>
+                                                }
+                                                @if (reference.Tags != null && reference.Tags.Any())
+                                                {
+                                                    <span> (標籤: @string.Join(", ", reference.Tags))</span>
+                                                }
+                                            </MudListItem>
+                                        }
+                                    </MudList>
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 致謝 -->
+                        @if (_selectedCveData.Containers?.Cna?.Credits != null && _selectedCveData.Containers.Cna.Credits.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #fce4ec;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">致謝</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var credit in _selectedCveData.Containers.Cna.Credits)
+                                        {
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Person" IconSize="Size.Small">
+                                                @if (!string.IsNullOrEmpty(credit.Value))
+                                                {
+                                                    <span>@credit.Value</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(credit.Type))
+                                                {
+                                                    <span> (類型: @credit.Type)</span>
+                                                }
+                                            </MudListItem>
+                                        }
+                                    </MudList>
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- 時間線 -->
+                        @if (_selectedCveData.Containers?.Cna?.Timeline != null && _selectedCveData.Containers.Cna.Timeline.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #fff3e0;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">時間線</MudText>
+                                    <MudTimeline>
+                                        @foreach (var timelineEntry in _selectedCveData.Containers.Cna.Timeline.OrderBy(t => t.Time))
+                                        {
+                                            <MudTimelineItem Color="Color.Info">
+                                                <ItemOpposite>
+                                                    @timelineEntry.Time.ToString("yyyy-MM-dd")
+                                                </ItemOpposite>
+                                                <ItemContent>
+                                                    <MudText>@timelineEntry.Value</MudText>
+                                                </ItemContent>
+                                            </MudTimelineItem>
+                                        }
+                                    </MudTimeline>
+                                </MudPaper>
+                            </MudItem>
+                        }
+
+                        <!-- ADP 資訊 -->
+                        @if (_selectedCveData.Containers?.Adp != null && _selectedCveData.Containers.Adp.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background-color: #e8eaf6;">
+                                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary">ADP 資訊</MudText>
+                                    <MudExpansionPanels>
+                                        @foreach (var adp in _selectedCveData.Containers.Adp)
+                                        {
+                                            <MudExpansionPanel>
+                                                <TitleContent>
+                                                    <MudText Typo="Typo.body1">
+                                                        @(!string.IsNullOrEmpty(adp.Title) ? adp.Title : "ADP 數據")
+                                                        @if (adp.ProviderMetadata != null && !string.IsNullOrEmpty(adp.ProviderMetadata.ShortName))
+                                                        {
+                                                            <span> - @adp.ProviderMetadata.ShortName</span>
+                                                        }
+                                                    </MudText>
+                                                </TitleContent>
+                                                <ChildContent>
+                                                    @if (adp.ProviderMetadata != null)
+                                                    {
+                                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">提供者資訊</MudText>
+                                                        @if (!string.IsNullOrEmpty(adp.ProviderMetadata.OrgId))
+                                                        {
+                                                            <MudText><strong>提供者 ID:</strong> @adp.ProviderMetadata.OrgId</MudText>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(adp.ProviderMetadata.ShortName))
+                                                        {
+                                                            <MudText><strong>提供者名稱:</strong> @adp.ProviderMetadata.ShortName</MudText>
+                                                        }
+                                                        @if (adp.ProviderMetadata.DateUpdated.HasValue)
+                                                        {
+                                                            <MudText><strong>提供者更新日期:</strong> @adp.ProviderMetadata.DateUpdated?.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                                        }
+                                                    }
+
+                                                    @if (adp.Metrics != null && adp.Metrics.Any())
+                                                    {
+                                                        <MudDivider Class="my-2" />
+                                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">評分指標</MudText>
+                                                        @foreach (var metric in adp.Metrics)
+                                                        {
+                                                            @if (metric.Other != null)
+                                                            {
+                                                                <MudText><strong>類型:</strong> @metric.Other.Type</MudText>
+                                                                @if (metric.Other.Content != null)
+                                                                {
+                                                                    <MudCard Elevation="0" Class="mt-1 pa-2" Style="background-color: #e3f2fd;">
+                                                                        @if (!string.IsNullOrEmpty(metric.Other.Content.Id))
+                                                                        {
+                                                                            <MudText><strong>ID:</strong> @metric.Other.Content.Id</MudText>
+                                                                        }
+                                                                        <MudText><strong>時間戳:</strong> @metric.Other.Content.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                                                        @if (!string.IsNullOrEmpty(metric.Other.Content.Version))
+                                                                        {
+                                                                            <MudText><strong>版本:</strong> @metric.Other.Content.Version</MudText>
+                                                                        }
+                                                                        @if (!string.IsNullOrEmpty(metric.Other.Content.Role))
+                                                                        {
+                                                                            <MudText><strong>角色:</strong> @metric.Other.Content.Role</MudText>
+                                                                        }
+                                                                        @if (metric.Other.Content.Options != null && metric.Other.Content.Options.Any())
+                                                                        {
+                                                                            <MudText Typo="Typo.subtitle2" Class="mt-1">選項:</MudText>
+                                                                            <MudList T="string" Dense="true" DisableGutters="true" Class="pa-0">
+                                                                                @foreach (var option in metric.Other.Content.Options)
+                                                                                {
+                                                                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Settings" IconSize="Size.Small">
+                                                                                        <MudText>
+                                                                                            @if (!string.IsNullOrEmpty(option.Exploitation))
+                                                                                            {
+                                                                                                <span><strong>利用狀態:</strong> @option.Exploitation</span>
+                                                                                            }
+                                                                                            @if (!string.IsNullOrEmpty(option.Automatable))
+                                                                                            {
+                                                                                                <span> | <strong>可自動化:</strong> @option.Automatable</span>
+                                                                                            }
+                                                                                            @if (!string.IsNullOrEmpty(option.TechnicalImpact))
+                                                                                            {
+                                                                                                <span> | <strong>技術影響:</strong> @option.TechnicalImpact</span>
+                                                                                            }
+                                                                                        </MudText>
+                                                                                    </MudListItem>
+                                                                                }
+                                                                            </MudList>
+                                                                        }
+                                                                    </MudCard>
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                </ChildContent>
+                                            </MudExpansionPanel>
+                                        }
+                                    </MudExpansionPanels>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
             </MudCardContent>
         </MudCard>
     </MudItem>

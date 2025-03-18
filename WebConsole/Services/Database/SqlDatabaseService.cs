@@ -3,7 +3,7 @@ using WebConsole.Models;
 
 namespace WebConsole.Services.Database;
 
-public class SqlDatabaseService : IDatabaseService
+public class SqlDatabaseService
 {
     private readonly IDbConnectionFactory _connectionFactory; // 新增自己的 connectionFactory
     private readonly CveDataInserter _cveDataInserter;

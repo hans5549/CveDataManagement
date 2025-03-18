@@ -2,7 +2,7 @@ namespace WebConsole.Models;
 
 public class CveProduct
 {
-    public string? ProductName { get; set; } = string.Empty;
-
-    public string? CveId { get; set; } = string.Empty;
+    public string? Vendor { get; set; }
+    public string? Product { get; set; }
+    public List<string>? CveIds { get; set; }
 }
