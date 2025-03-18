@@ -291,10 +291,277 @@ public class CveRepository
                             });
                         }
                     }
+                    
+                    // 8. 查詢CVSS評分資訊
+                    try
+                    {
+                        var metricsSql = @"
+                            SELECT CveCvssScoreId, CveId, Format, Version, BaseScore, BaseSeverity, VectorString
+                            FROM CveCvssScore
+                            WHERE CveId = @CveId";
+                        
+                        var metrics = _context.Database.SqlQueryRaw<MetricsDto>(metricsSql, metadataParams).ToList();
+                        
+                        if (metrics.Any())
+                        {
+                            rootCve.Containers.Cna.Metrics = [];
+                            
+                            foreach (var metric in metrics)
+                            {
+                                var metricItem = new Cve.Metric();
+                                
+                                // 根據Format和Version確定CVSS版本
+                                if (metric.Format == "CVSS" && metric.Version != null)
+                                {
+                                    // CVSS v4.0
+                                    if (metric.Version.StartsWith("4."))
+                                    {
+                                        metricItem.CvssV4_0 = new Cve.CvssV4_0
+                                        {
+                                            Version = metric.Version,
+                                            BaseScore = metric.BaseScore,
+                                            BaseSeverity = metric.BaseSeverity,
+                                            VectorString = metric.VectorString
+                                        };
+                                    }
+                                    // CVSS v3.1
+                                    else if (metric.Version.StartsWith("3.1"))
+                                    {
+                                        metricItem.CvssV3_1 = new Cve.CvssV3_1
+                                        {
+                                            Version = metric.Version,
+                                            BaseScore = metric.BaseScore,
+                                            BaseSeverity = metric.BaseSeverity,
+                                            VectorString = metric.VectorString
+                                        };
+                                    }
+                                    // CVSS v3.0
+                                    else if (metric.Version.StartsWith("3.0"))
+                                    {
+                                        metricItem.CvssV3_0 = new Cve.CvssV3_0
+                                        {
+                                            Version = metric.Version,
+                                            BaseScore = metric.BaseScore,
+                                            BaseSeverity = metric.BaseSeverity,
+                                            VectorString = metric.VectorString
+                                        };
+                                    }
+                                    // CVSS v2.0
+                                    else if (metric.Version.StartsWith("2."))
+                                    {
+                                        metricItem.CvssV2_0 = new Cve.CvssV2_0
+                                        {
+                                            Version = metric.Version,
+                                            BaseScore = metric.BaseScore,
+                                            VectorString = metric.VectorString
+                                        };
+                                    }
+                                }
+                                
+                                rootCve.Containers.Cna.Metrics.Add(metricItem);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"查詢CveCvssScore表錯誤: {ex.Message}");
+                        // 初始化空集合，確保不會因為表不存在而導致空引用異常
+                        rootCve.Containers.Cna.Metrics = [];
+                    }
+                    
+                    // 9. 查詢問題類型（ProblemTypes）
+                    try
+                    {
+                        var problemTypesSql = @"
+                            SELECT ProblemTypeId, CnaId
+                            FROM ProblemType
+                            WHERE CnaId = @CnaId";
+                        
+                        var problemTypes = _context.Database.SqlQueryRaw<ProblemTypeDto>(problemTypesSql, cnaParams).ToList();
+                        
+                        if (problemTypes.Any())
+                        {
+                            rootCve.Containers.Cna.ProblemTypes = [];
+                            
+                            foreach (var problemType in problemTypes)
+                            {
+                                var problemTypeDesc = new Cve.ProblemType
+                                {
+                                    Descriptions = []
+                                };
+                                
+                                // 查詢問題類型描述
+                                try 
+                                {
+                                    var problemTypeDescSql = @"
+                                        SELECT CweId, Description, Language, Type
+                                        FROM ProblemTypeDescription
+                                        WHERE ProblemTypeId = @ProblemTypeId";
+                                    
+                                    object[] problemTypeParams =
+                                    [
+                                        new MySqlParameter("@ProblemTypeId", problemType.ProblemTypeId)
+                                    ];
+                                    
+                                    var problemTypeDescriptions = _context.Database.SqlQueryRaw<ProblemTypeDescriptionDto>(problemTypeDescSql, problemTypeParams).ToList();
+                                    
+                                    if (problemTypeDescriptions.Any())
+                                    {
+                                        foreach (var desc in problemTypeDescriptions)
+                                        {
+                                            problemTypeDesc.Descriptions.Add(new Cve.ProblemTypeDescription
+                                            {
+                                                CweId = desc.CweId,
+                                                Description = desc.Description,
+                                                Language = desc.Language,
+                                                Type = desc.Type
+                                            });
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"查詢ProblemTypeDescription表錯誤: {ex.Message}");
+                                }
+                                
+                                rootCve.Containers.Cna.ProblemTypes.Add(problemTypeDesc);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"查詢ProblemType表錯誤: {ex.Message}");
+                        // 初始化空集合，確保不會因為表不存在而導致空引用異常
+                        rootCve.Containers.Cna.ProblemTypes = [];
+                    }
+                    
+                    // 10. 查詢參考資料（References）
+                    try
+                    {
+                        var referencesSql = @"
+                            SELECT ReferenceId, CveId, Url, Name
+                            FROM Reference 
+                            WHERE CveId = @CveId";
+                        
+                        var references = _context.Database.SqlQueryRaw<ReferenceDto>(referencesSql, metadataParams).ToList();
+                        
+                        if (references.Any())
+                        {
+                            rootCve.Containers.Cna.References = [];
+                            
+                            foreach (var reference in references)
+                            {
+                                var referenceItem = new Cve.Reference
+                                {
+                                    Url = reference.Url,
+                                    Name = reference.Name,
+                                    Tags = []
+                                };
+                                
+                                // 查詢參考標籤
+                                try
+                                {
+                                    var tagsSql = @"
+                                        SELECT Tag
+                                        FROM ReferenceTags
+                                        WHERE ReferenceId = @ReferenceId";
+                                    
+                                    object[] tagsParams =
+                                    [
+                                        new MySqlParameter("@ReferenceId", reference.ReferenceId)
+                                    ];
+                                    
+                                    var tags = _context.Database.SqlQueryRaw<string>(tagsSql, tagsParams).ToList();
+                                    
+                                    if (tags.Any())
+                                    {
+                                        referenceItem.Tags.AddRange(tags);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"查詢ReferenceTags表錯誤: {ex.Message}");
+                                }
+                                
+                                rootCve.Containers.Cna.References.Add(referenceItem);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"查詢Reference表錯誤: {ex.Message}");
+                        // 初始化空集合，確保不會因為表不存在而導致空引用異常
+                        rootCve.Containers.Cna.References = [];
+                    }
+                    
+                    // 11. 查詢貢獻者（Credits）
+                    try
+                    {
+                        var creditsSql = @"
+                            SELECT Language, Type, Value
+                            FROM Credit
+                            WHERE CveId = @CveId";
+                        
+                        var credits = _context.Database.SqlQueryRaw<CreditDto>(creditsSql, metadataParams).ToList();
+                        
+                        if (credits.Any())
+                        {
+                            rootCve.Containers.Cna.Credits = [];
+                            
+                            foreach (var credit in credits)
+                            {
+                                rootCve.Containers.Cna.Credits.Add(new Cve.Credit
+                                {
+                                    Language = credit.Language,
+                                    Type = credit.Type,
+                                    Value = credit.Value
+                                });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"查詢Credit表錯誤: {ex.Message}");
+                        // 初始化空集合，確保不會因為表不存在而導致空引用異常
+                        rootCve.Containers.Cna.Credits = [];
+                    }
+                    
+                    // 12. 查詢時間線（Timeline）
+                    try
+                    {
+                        var timelineSql = @"
+                            SELECT Time, Language, Value
+                            FROM TimelineEntry
+                            WHERE CveId = @CveId
+                            ORDER BY Time";
+                        
+                        var timeline = _context.Database.SqlQueryRaw<TimelineDto>(timelineSql, metadataParams).ToList();
+                        
+                        if (timeline.Any())
+                        {
+                            rootCve.Containers.Cna.Timeline = [];
+                            
+                            foreach (var entry in timeline)
+                            {
+                                rootCve.Containers.Cna.Timeline.Add(new Cve.TimelineEntry
+                                {
+                                    Time = entry.Time,
+                                    Language = entry.Language,
+                                    Value = entry.Value
+                                });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"查詢TimelineEntry表錯誤: {ex.Message}");
+                        // 初始化空集合，確保不會因為表不存在而導致空引用異常
+                        rootCve.Containers.Cna.Timeline = [];
+                    }
                 }
             }
 
-            // 8. 如果有ContainersId，查詢ADP資訊
+            // 13. 如果有ContainersId，查詢ADP資訊
             if (containersInfo != null)
             {
                 var adpSql = @"
